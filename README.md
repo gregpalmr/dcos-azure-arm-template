@@ -27,13 +27,13 @@ $ az login
 
 This ARM template will launch 3 master nodes, and a number of private agent and public agent nodes. It will use the following resource types and sizes:
 
-| Server Type           | OS Type   | VM Size                                              |
-| --------------------- | --------- | ---------------------------------------------------- |
-|Jump Server:           |Ubuntu     |  Standard_A1     (1 vcpu, <2gb RAM,  10gb Disk)      |
-|Bootstrap Server:      |CoreOS     |  Standard_A2     (2 vcpu, 3.5gb RAM, 200gb Disk)     |
-|3 Master Nodes:        |CoreOS     |  Standard_D12_v2 (4 vcpu, 28gb RAM,  200gb Disk)     |
-|n Private Agent Nodes: |CoreOS     |  Standard_D12_v2 (4 vcpu, 28gb RAM,  200gb Disk)     |
-|n Public Agent Nodes:  |CoreOS     |  Standard_D2_v2  (2 vcpu,  7gb RAM,  100gb Disk)     |
+| Server Type           | OS Type   | VM Size          | VM Size Details                    |
+| --------------------- | --------- | ---------------- | ---------------------------------- |
+|Jump Server:           |Ubuntu     |  Standard_A1     | 1 vcpu, <2gb RAM,  10gb Disk       |
+|Bootstrap Server:      |CoreOS     |  Standard_A2     | 2 vcpu, 3.5gb RAM, 200gb Disk      |
+|3 Master Nodes:        |CoreOS     |  Standard_D12_v2 | 4 vcpu, 28gb RAM,  200gb Disk      |
+|n Private Agent Nodes: |CoreOS     |  Standard_D12_v2 | 4 vcpu, 28gb RAM,  200gb Disk      |
+|n Public Agent Nodes:  |CoreOS     |  Standard_D2_v2  | 2 vcpu,  7gb RAM,  100gb Disk      |
 
 
 Create a new Azure Resource Group to contain this new DC/OS Cluster's resources 
