@@ -38,13 +38,13 @@ This ARM template will launch 3 master nodes, and a number of private agent and 
 
 Create a new Azure Resource Group to contain this new DC/OS Cluster's resources 
 
-$ az group create --location westus --name <my proj>-DCOS-Group-1
+$ az group create --location westus --name My-Proj-DCOS-Group-1
 
 Deploy a new Enterprise DC/OS cluster using the ARM template
 
 $ az group deployment create \
-    --name <my proj>-DCOS-Cluster-1 \
-    --resource-group <my proj>-DCOS-Group-1 \
+    --name My-Proj-DCOS-Cluster-1 \
+    --resource-group My-Proj-DCOS-Group-1 \
     --template-file Create_Ent_DCOS_Azure_Cluster.json \
     | tee az-deployment1.out
 
@@ -68,7 +68,7 @@ dcosInstallerURL:
 
 dcosClusterName: 
 
-     <my project> DC/OS Cluster 1
+     My-Projct DC/OS Cluster 1
 
 privateAgentCount:
 
@@ -93,7 +93,7 @@ NOTE: You may have to hit the "Refresh" button several times to get the login pr
 
 # Step 5 - SSH to the Azure jump server for this cluster
 
-$ ssh -i ~/.ssh/<my priv ssh key> core@<jump-server-public-ip>
+$ ssh -i ~/.ssh/my-priv-ssh-key core@<jump-server-public-ip>
 
 Copy your SSH Private key to the jump server
 
