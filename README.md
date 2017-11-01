@@ -19,6 +19,9 @@ Follow these instructions for Mac and Windows:
 
      https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest
 
+Login using the Azure CLI - You will be prompted to authenticate via the Azure Web page
+
+$ az login
 
 # Step 3. Use the Supplied ARM template to launch a new DC/OS cluster in Azure
 
@@ -32,13 +35,12 @@ This ARM template will launch 3 master nodes, and a number of private agent and 
 |n Private Agent Nodes: |CoreOS     |  Standard_D12_v2 (4 vcpu, 28gb RAM,  200gb Disk)     |
 |n Public Agent Nodes:  |CoreOS     |  Standard_D2_v2  (2 vcpu,  7gb RAM,  100gb Disk)     |
 
-Login using the Azure CLI - You will be prompted to authenticate via the Azure Web page
-
-$ az login
 
 Create a new Azure Resource Group to contain this new DC/OS Cluster's resources 
 
 $ az group create --location westus --name <my proj>-DCOS-Group-1
+
+Deploy a new Enterprise DC/OS cluster using the ARM template
 
 $ az group deployment create \
     --name <my proj>-DCOS-Cluster-1 \
@@ -46,35 +48,35 @@ $ az group deployment create \
     --template-file Create_Ent_DCOS_Azure_Cluster.json \
     | tee az-deployment1.out
 
-You will be prompted for the following paramters:
+During this process, you will be prompted for the following paramters:
 
 SSHPublicKey:
 
-ssh-rsa <public ssh key contents>
+     ssh-rsa <public ssh key contents>
 
 customerKey: 
 
-XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
+     XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
 
 dcosPassword: 
 
-<new dcosadmon user's password>
+     <new dcosadmon user's password>
 
 dcosInstallerURL: 
 
-https://downloads.mesosphere.io/<path to installer download>
+     https://downloads.mesosphere.io/<path to installer download>
 
 dcosClusterName: 
 
-<my project> DC/OS Cluster 1
+     <my project> DC/OS Cluster 1
 
 privateAgentCount:
 
-[7] 9
+     [7] 9
 
 publicAgentCount:
 
-[2] 1
+     [2] 1
 
 
 # Step 4 - Access the Enterprise DC/OS Cluster
