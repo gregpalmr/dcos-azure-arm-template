@@ -89,22 +89,24 @@ NOTE: You may have to hit the "Refresh" button several times to get the login pr
 
 # Step 5 - SSH to the Azure jump server for this cluster
 
-$ ssh -i ~/.ssh/my-priv-ssh-key core@<jump-server-public-ip>
+     $ ssh -i ~/.ssh/my-priv-ssh-key core@<jump-server-public-ip>
 
 Copy your SSH Private key to the jump server
 
-$ cat > ~/.ssh/defaultkey.key
-<copy and paste your private ssh key from your laptop>
-[CTRL-D]
+     $ cat > ~/.ssh/defaultkey.key
+
+       copy and paste your private ssh key from your laptop
+
+     [CTRL-D]
 
 SSH to the DC/OS Bootstrap server
 
-$ ssh -i ~/.ssh/defaultkey.key core@<bootstrap server private ip address>
+     $ ssh -i ~/.ssh/defaultkey.key core@<bootstrap server private ip address>
 
 OR 
 
 SSH to one of your masters
 
-$ ssh -i ~/.ssh/defaultkey.key core@<master node 1 private ip address>
+     $ ssh -i ~/.ssh/defaultkey.key core@<master node 1 private ip address>
 
 
