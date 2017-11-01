@@ -87,7 +87,9 @@ NOTE: You may have to hit the "Refresh" button several times to get the login pr
 
 ![Alt text](/resources/dcos_azure_login.jpg?raw=true "DC/OS Dashboard Login Screen")
 
-# Step 5 - SSH to the Azure jump server for this cluster
+# Step 5 - Access your DC/OS cluster nodes via SSH
+
+SSH to the Azure jump server for this cluster
 
      $ ssh -i ~/.ssh/my-priv-ssh-key core@<jump-server-public-ip>
 
