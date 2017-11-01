@@ -42,11 +42,7 @@ $ az group create --location westus --name My-Proj-DCOS-Group-1
 
 Deploy a new Enterprise DC/OS cluster using the ARM template
 
-$ az group deployment create &#92;
-    --name My-Proj-DCOS-Cluster-1 &#92;
-    --resource-group My-Proj-DCOS-Group-1 &#92;
-    --template-file Create_Ent_DCOS_Azure_Cluster.json &#92;
-    | tee az-deployment1.out
+$ az group deployment create --name My-Proj-DCOS-Cluster-1 --resource-group My-Proj-DCOS-Group-1 --template-file Create_Ent_DCOS_Azure_Cluster.json | tee az-deployment1.out
 
 During this process, you will be prompted for the following paramters:
 
