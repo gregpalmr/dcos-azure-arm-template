@@ -6,24 +6,26 @@ An Azure ARM Tempalte for launching an Enteprise DC/OS cluster in the Azure clou
 
 
 
-Step 1. Setup your Azure CLI 2.0
+# Step 1. Setup your Azure CLI 2.0
 
 Follow these instructions for Mac and Windows:
 
      https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest
 
 
-Step 2. Use the Supplied ARM template to launch a new DC/OS cluster in Azure
+# Step 2. Use the Supplied ARM template to launch a new DC/OS cluster in Azure
 
 This ARM template will launch 3 master nodes, and a number of private agent and public agent nodes. It will use the following resource types and sizes:
 
-Jump Server:           OS: Ubuntu    VM Size: Standard_A1     (1 vcpu, <2gb RAM,  10gb Disk)
-Bootstrap Server:      OS: CoreOS    VM Size: Standard_A2     (2 vcpu, 3.5gb RAM, 200gb Disk)
-3 Master Nodes:        OS: CoreOS    VM Size: Standard_D12_v2 (4 vcpu, 28gb RAM,  200gb Disk)
-n Private Agent Nodes: OS: CoreOS    VM Size: Standard_D12_v2 (4 vcpu, 28gb RAM,  200gb Disk)
-n Public Agent Nodes:  OS: CoreOS    VM Size: Standard_D2_v2  (2 vcpu,  7gb RAM,  100gb Disk)
+| Server Type           | OS Type   | VM Size                                              |
+| --------------------- | --------- | ---------------------------------------------------- |
+|Jump Server:           |Ubuntu     |  Standard_A1     (1 vcpu, <2gb RAM,  10gb Disk)      |
+|Bootstrap Server:      |CoreOS     |  Standard_A2     (2 vcpu, 3.5gb RAM, 200gb Disk)     |
+|3 Master Nodes:        |CoreOS     |  Standard_D12_v2 (4 vcpu, 28gb RAM,  200gb Disk)     |
+|n Private Agent Nodes: |CoreOS     |  Standard_D12_v2 (4 vcpu, 28gb RAM,  200gb Disk)     |
+|n Public Agent Nodes:  |CoreOS     |  Standard_D2_v2  (2 vcpu,  7gb RAM,  100gb Disk)     |
 
-# Login using the Azure CLI - You will be prompted to authenticate via the Azure Web page
+Login using the Azure CLI - You will be prompted to authenticate via the Azure Web page
 
 $ az login
 
@@ -67,7 +69,7 @@ publicAgentCount:
 [2] 1
 
 
-STEP 2 - Access the Enterprise DC/OS Cluster
+# Step 3 - Access the Enterprise DC/OS Cluster
 
 When the DC/OS cluster is up and running, go to your Azure Console and open the resource group you created to contain these resources and look for the master load balancer public ip address (masterLBPIP) object.
 
@@ -78,7 +80,7 @@ Copy the DNS name and paste it into your web browser's address bar to display th
 NOTE: You may have to hit the "Refresh" button several times to get the login prompt.
 
 
-STEP 3 - SSH to the Azure jump server for this cluster
+# Step 4 - SSH to the Azure jump server for this cluster
 
 $ ssh -i ~/.ssh/<my priv ssh key> core@<jump-server-public-ip>
 
