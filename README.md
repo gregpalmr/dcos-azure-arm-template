@@ -29,7 +29,7 @@ Login using the Azure CLI - You will be prompted to authenticate via the Azure W
 
 $ az login
 
-# Create a new Azure Resource Group to put this new DC/OS Cluster's objects in
+Create a new Azure Resource Group to put this new DC/OS Cluster's objects in
 $ az group create --location westus --name <my proj>-DCOS-Group-1
 
 $ az group deployment create \
@@ -38,7 +38,7 @@ $ az group deployment create \
     --template-file Create_Ent_DCOS_Azure_Cluster.json \
     | tee az-deployment1.out
 
-# You will be prompted for the following paramters:
+You will be prompted for the following paramters:
 
 SSHPublicKey:
 
