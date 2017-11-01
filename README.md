@@ -64,7 +64,7 @@ dcosInstallerURL:
 
 dcosClusterName: 
 
-     My-Projct DC/OS Cluster 1
+     My-Project DC/OS Cluster 1
 
 privateAgentCount:
 
