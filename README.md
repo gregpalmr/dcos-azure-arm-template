@@ -4,16 +4,18 @@ DC/OS Azure ARM Template
 
 An Azure ARM Tempalte for launching an Enteprise DC/OS cluster in the Azure cloud environment.
 
+# Step 1. Clone this git repo
 
+$ git clone https://github.com/gregpalmr/dcos-azure-arm-template.git
 
-# Step 1. Setup your Azure CLI 2.0
+# Step 2. Setup your Azure CLI 2.0
 
 Follow these instructions for Mac and Windows:
 
      https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest
 
 
-# Step 2. Use the Supplied ARM template to launch a new DC/OS cluster in Azure
+# Step 3. Use the Supplied ARM template to launch a new DC/OS cluster in Azure
 
 This ARM template will launch 3 master nodes, and a number of private agent and public agent nodes. It will use the following resource types and sizes:
 
@@ -29,7 +31,8 @@ Login using the Azure CLI - You will be prompted to authenticate via the Azure W
 
 $ az login
 
-Create a new Azure Resource Group to put this new DC/OS Cluster's objects in
+Create a new Azure Resource Group to contain this new DC/OS Cluster's resources 
+
 $ az group create --location westus --name <my proj>-DCOS-Group-1
 
 $ az group deployment create \
@@ -69,7 +72,7 @@ publicAgentCount:
 [2] 1
 
 
-# Step 3 - Access the Enterprise DC/OS Cluster
+# Step 4 - Access the Enterprise DC/OS Cluster
 
 When the DC/OS cluster is up and running, go to your Azure Console and open the resource group you created to contain these resources and look for the master load balancer public ip address (masterLBPIP) object.
 
@@ -79,8 +82,9 @@ Copy the DNS name and paste it into your web browser's address bar to display th
 
 NOTE: You may have to hit the "Refresh" button several times to get the login prompt.
 
+![Alt text](/resources/dcos_azure_login.jpg?raw=true "DC/OS Dashboard Login Screen")
 
-# Step 4 - SSH to the Azure jump server for this cluster
+# Step 5 - SSH to the Azure jump server for this cluster
 
 $ ssh -i ~/.ssh/<my priv ssh key> core@<jump-server-public-ip>
 
