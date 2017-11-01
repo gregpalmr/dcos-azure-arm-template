@@ -56,7 +56,7 @@ customerKey:
 
 dcosPassword: 
 
-     <new dcosadmon user's password>
+     <new dcosadmin user's password>
 
 dcosInstallerURL: 
 
