@@ -111,4 +111,9 @@ SSH to one of your masters
 
      $ ssh -i ~/.ssh/defaultkey.key core@<master node 1 private ip address>
 
+# Step 6 - Destroy your Azure DC/OS Cluster
+
+Destroy the Azure resource group 
+
+$ az group delete --name My-Proj-DCOS-Group-1
 
