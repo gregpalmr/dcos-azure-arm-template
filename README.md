@@ -4,9 +4,13 @@ DC/OS Azure ARM Template
 
 An Azure ARM Tempalte for launching an Enteprise DC/OS cluster in the Azure cloud environment.
 
+     *** NOTE: This ARM template is provided for convenience and is not directly supported by Mesosphere, Inc. ***
+
 # Step 1. Clone this git repo
 
 $ git clone https://github.com/gregpalmr/dcos-azure-arm-template.git
+
+$ cd dcos-azure-arm-template
 
 # Step 2. Setup your Azure CLI 2.0
 
