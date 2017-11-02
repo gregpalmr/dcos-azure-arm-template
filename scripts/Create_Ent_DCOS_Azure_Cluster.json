@@ -84,6 +84,8 @@
         "description": "The number DC/OS Private Agents for this cluster."
       },
       "allowedValues": [
+        1,
+        2,
         3,
         4,
         5,
@@ -104,10 +106,10 @@
         "description": "The number DC/OS Public Agents for this cluster."
       },
       "allowedValues": [
-        0,
         1,
         2,
-        3
+        3,
+        0
       ],
       "type": "int"
     },
