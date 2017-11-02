@@ -10,9 +10,19 @@
     },
     "customerKey": {
       "metadata": {
-        "description": "DC/OS Enterprise customer key"
+        "description": "DC/OS Enterprise customer key."
       },
       "type": "securestring"
+    },
+    "securityMode": {
+      "metadata": {
+        "description": "DC/OS Enterprise security mode (permissive or strict)."
+      },
+      "type": "string",
+      "allowedValues": [
+        "permissive",
+        "strict"
+      ]
     },
     "dcosUsername": {
       "metadata": {
@@ -763,7 +773,7 @@
           "computerName": "bootstrapVM",
           "adminUsername": "core",
           "adminPassword": "[parameters('adminPassword')]",
-          "customData": "[base64(concat('#!/bin/bash\nset -eu\nset -o pipefail\nset +o histexpand\nsystemctl stop update-engine\nsystemctl mask update-engine\nsystemctl stop locksmithd\nsystemctl mask locksmithd\ntimedatectl set-ntp true\nsystemctl restart systemd-timesyncd\nmkdir -p /opt/dcos/genconf/\ncd /opt/dcos/\ncurl ', parameters('dcosInstallerURL'), ' -o dcos_generate_config.ee.sh --retry 3\nchmod +x dcos_generate_config.ee.sh\nbash dcos_generate_config.ee.sh --version\nHASHED_PASSWORD=$(bash dcos_generate_config.ee.sh --hash-password ', variables('singleQuote'), parameters('dcosPassword'), variables('singleQuote'), ')\ntee /opt/dcos/genconf/config.yaml <<EOF\n---\nbootstrap_url: http://10.0.0.5:80\ncluster_name: ', parameters('dcosClusterName'), '\ncustomer_key: ', parameters('customerKey'), '\nexhibitor_storage_backend: azure\nexhibitor_azure_account_name: ', variables('storageAccountName'), '\nexhibitor_azure_account_key: ', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), variables('storageApiVersion')).keys[0].value, '\nexhibitor_azure_prefix: exhibitor\nip_detect_filename: /genconf/ip-detect\nmaster_discovery: static\nmaster_list:\n- 10.32.0.4\n- 10.32.0.5\n- 10.32.0.6\nresolvers:\n- 8.8.8.8\n- 8.8.4.4\noauth_enabled: ', parameters('oauthEnabled'), '\nsecurity: permissive\ntelemetry_enabled: false\ncheck_time: false\nsuperuser_username: ', parameters('dcosUsername'), '\nsuperuser_password_hash: $HASHED_PASSWORD\nEOF\ntee /opt/dcos/genconf/ip-detect <<EOF\n#!/bin/bash\nset -o nounset -o errexit\ncurl -H Metadata:true -fsSL \"http://169.254.169.254/metadata/instance/network/interface/0/ipv4/ipAddress/0/privateIpAddress?api-version=2017-04-02&format=text\"\nEOF\n\n./dcos_generate_config.ee.sh\ndocker run -d --restart=always -p 80:80 -v /opt/dcos/genconf/serve:/usr/share/nginx/html:ro nginx:alpine\n'))]",
+          "customData": "[base64(concat('#!/bin/bash\nset -eu\nset -o pipefail\nset +o histexpand\nsystemctl stop update-engine\nsystemctl mask update-engine\nsystemctl stop locksmithd\nsystemctl mask locksmithd\ntimedatectl set-ntp true\nsystemctl restart systemd-timesyncd\nmkdir -p /opt/dcos/genconf/\ncd /opt/dcos/\ncurl ', parameters('dcosInstallerURL'), ' -o dcos_generate_config.ee.sh --retry 3\nchmod +x dcos_generate_config.ee.sh\nbash dcos_generate_config.ee.sh --version\nHASHED_PASSWORD=$(bash dcos_generate_config.ee.sh --hash-password ', variables('singleQuote'), parameters('dcosPassword'), variables('singleQuote'), ')\ntee /opt/dcos/genconf/config.yaml <<EOF\n---\nbootstrap_url: http://10.0.0.5:80\ncluster_name: ', parameters('dcosClusterName'), '\ncustomer_key: ', parameters('customerKey'), '\nexhibitor_storage_backend: azure\nexhibitor_azure_account_name: ', variables('storageAccountName'), '\nexhibitor_azure_account_key: ', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), variables('storageApiVersion')).keys[0].value, '\nexhibitor_azure_prefix: exhibitor\nip_detect_filename: /genconf/ip-detect\nmaster_discovery: static\nmaster_list:\n- 10.32.0.4\n- 10.32.0.5\n- 10.32.0.6\nresolvers:\n- 8.8.8.8\n- 8.8.4.4\noauth_enabled: ', parameters('oauthEnabled'), '\nsecurity: ', parameters('securityMode'), '\ntelemetry_enabled: false\ncheck_time: false\nsuperuser_username: ', parameters('dcosUsername'), '\nsuperuser_password_hash: $HASHED_PASSWORD\nEOF\ntee /opt/dcos/genconf/ip-detect <<EOF\n#!/bin/bash\nset -o nounset -o errexit\ncurl -H Metadata:true -fsSL \"http://169.254.169.254/metadata/instance/network/interface/0/ipv4/ipAddress/0/privateIpAddress?api-version=2017-04-02&format=text\"\nEOF\n\n./dcos_generate_config.ee.sh\ndocker run -d --restart=always -p 80:80 -v /opt/dcos/genconf/serve:/usr/share/nginx/html:ro nginx:alpine\n'))]",
           "linuxConfiguration": {
             "disablePasswordAuthentication": "[parameters('disablePasswordAuthentication')]",
             "ssh": {

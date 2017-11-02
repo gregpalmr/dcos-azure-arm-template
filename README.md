@@ -48,15 +48,19 @@ During this process, you will be prompted for the following paramters:
 
 SSHPublicKey:
 
-     ssh-rsa <public ssh key contents>
+     public ssh key contents (e.g. ssh-rsa 9QTWQijZesCanLSf5nwYCTMsNGlUf ...)
 
 customerKey: 
 
      XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
 
+securityMode:
+
+     permissive or strict
+
 dcosPassword: 
 
-     <new dcosadmin user's password>
+     new password for dcosadmin user 
 
 dcosInstallerURL: 
 
