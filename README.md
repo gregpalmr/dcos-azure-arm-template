@@ -50,7 +50,7 @@ SSHPublicKey:
 
      public ssh key contents (e.g. ssh-rsa 9QTWQijZesCanLSf5nwYCTMsNGlUf ...)
 
-customerKey: 
+customerKey (Get this from your Mesosphere sales engineer):
 
      XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
 
@@ -66,7 +66,7 @@ dcosPassword:
 
      new password for dcosadmin user 
 
-dcosInstallerURL: 
+dcosInstallerURL (Get this from your Mesosphere sales engineer):
 
      https://downloads.mesosphere.io/<path to installer download>
 
