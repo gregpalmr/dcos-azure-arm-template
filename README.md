@@ -99,7 +99,7 @@ NOTE: You may have to hit the "Refresh" button several times to get the login pr
 
 SSH to the Azure jump server for this cluster
 
-     $ ssh -i ~/.ssh/my-priv-ssh-key core@<jump-server-public-ip>
+     $ ssh -i ~/.ssh/my-priv-ssh-key core@jump-server-public-ip-address
 
 Copy your SSH Private key to the jump server
 
@@ -109,19 +109,21 @@ Copy your SSH Private key to the jump server
 
      [CTRL-D]
 
+     $ chmod 400 ~/.ssh/defaultkey.key
+
 SSH to the DC/OS Bootstrap server
 
-     $ ssh -i ~/.ssh/defaultkey.key core@<bootstrap server private ip address>
+     $ ssh -i ~/.ssh/defaultkey.key core@10.0.0.5
 
 OR 
 
 SSH to one of your masters
 
-     $ ssh -i ~/.ssh/defaultkey.key core@<master node 1 private ip address>
+     $ ssh -i ~/.ssh/defaultkey.key core@master-node-private-ip-address
 
 # Step 6 - Destroy your Azure DC/OS Cluster
 
 Destroy the Azure resource group 
 
-$ az group delete --name My-Proj-DCOS-Group-1
+     $ az group delete --name My-Proj-DCOS-Group-1
 
