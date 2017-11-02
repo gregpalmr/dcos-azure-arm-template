@@ -56,7 +56,11 @@ customerKey:
 
 securityMode:
 
-     permissive or strict
+     [1] permissive 
+     
+     or 
+     
+     [2] strict
 
 dcosPassword: 
 
@@ -72,11 +76,11 @@ dcosClusterName:
 
 privateAgentCount:
 
-     [7] 9
+     [5] 5
 
 publicAgentCount:
 
-     [2] 1
+     [1] 1
 
 
 # Step 4 - Access the Enterprise DC/OS Cluster
