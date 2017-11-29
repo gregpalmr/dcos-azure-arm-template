@@ -28,7 +28,7 @@
       "metadata": {
         "description": "DC/OS Superuser username."
       },
-      "defaultValue": "dcosadmin",
+      "defaultValue": "bootstrapuser",
       "type": "string"
     },
     "dcosPassword": {
@@ -101,7 +101,7 @@
       ],
       "type": "int"
     },
-      "publicAgentCount": {
+    "publicAgentCount": {
       "metadata": {
         "description": "The number DC/OS Public Agents for this cluster."
       },
@@ -149,9 +149,9 @@
     "agentPrivateSubnet": "[concat(variables('dcosVirtualNetworkID'), '/subnets/', 'dcos-agentPrivateSubnet')]",
     "agentPublicSubnet": "[concat(variables('dcosVirtualNetworkID'), '/subnets/', 'dcos-agentPublicSubnet')]",
     "jumpCustomData": "#!/bin/bash\nset -eu\nset -o pipefail\nset +o histexpand\nexec > /var/log/azure-arm-customData.log 2>&1\nsystemctl stop update-engine\nsystemctl mask update-engine\nsystemctl stop locksmithd\nsystemctl mask locksmithd\ntimedatectl set-ntp true\nsystemctl restart systemd-timesyncd\n",
-    "masterCustomData": "#!/bin/bash\nset -eu\nset -o pipefail\nset +o histexpand\nexec > /var/log/azure-arm-customData.log 2>&1\nsystemctl stop update-engine\nsystemctl mask update-engine\nsystemctl stop locksmithd\nsystemctl mask locksmithd\ntimedatectl set-ntp true\nsystemctl restart systemd-timesyncd\nmkdir -p /tmp/dcos\ncd /tmp/dcos\nCURL_EXIT_CODE=99\nset +e\nwhile [[ $CURL_EXIT_CODE -ne 0 ]]; do curl -O http://10.0.0.5/dcos_install.sh; CURL_EXIT_CODE=$?; sleep 5; done\nset -e\nchmod +x dcos_install.sh\n./dcos_install.sh master\n",
-    "agentCustomData": "#!/bin/bash\nset -eu\nset -o pipefail\nset +o histexpand\nexec > /var/log/azure-arm-customData.log 2>&1\nsystemctl stop update-engine\nsystemctl mask update-engine\nsystemctl stop locksmithd\nsystemctl mask locksmithd\ntimedatectl set-ntp true\nsystemctl restart systemd-timesyncd\nmkdir -p /tmp/dcos\ncd /tmp/dcos\nCURL_EXIT_CODE=99\nset +e\nwhile [[ $CURL_EXIT_CODE -ne 0 ]]; do curl -O http://10.0.0.5/dcos_install.sh; CURL_EXIT_CODE=$?; sleep 5; done\nset -e\nchmod +x dcos_install.sh\n./dcos_install.sh slave\n",
-    "publicAgentCustomData": "#!/bin/bash\nset -eu\nset -o pipefail\nset +o histexpand\nexec > /var/log/azure-arm-customData.log 2>&1\nsystemctl stop update-engine\nsystemctl mask update-engine\nsystemctl stop locksmithd\nsystemctl mask locksmithd\ntimedatectl set-ntp true\nsystemctl restart systemd-timesyncd\nmkdir -p /tmp/dcos\ncd /tmp/dcos\nCURL_EXIT_CODE=99\nset +e\nwhile [[ $CURL_EXIT_CODE -ne 0 ]]; do curl -O http://10.0.0.5/dcos_install.sh; CURL_EXIT_CODE=$?; sleep 5; done\nset -e\nchmod +x dcos_install.sh\n./dcos_install.sh slave_public\n",
+    "masterCustomData": "#!/bin/bash\nset -eu\nset -o pipefail\nset +o histexpand\nexec > /var/log/azure-arm-customData.log 2>&1\nsystemctl stop update-engine\nsystemctl mask update-engine\nsystemctl stop locksmithd\nsystemctl mask locksmithd\ntimedatectl set-ntp true\nsystemctl restart systemd-timesyncd\necho $(ifconfig eth0|grep 'inet ' | awk '{print $2}') $(hostname) >> /etc/hosts\nmkdir -p /tmp/dcos\ncd /tmp/dcos\nCURL_EXIT_CODE=99\nset +e\nwhile [[ $CURL_EXIT_CODE -ne 0 ]]; do curl -O http://10.0.0.5/dcos_install.sh; CURL_EXIT_CODE=$?; sleep 5; done\nset -e\nchmod +x dcos_install.sh\n./dcos_install.sh master\n",
+    "agentCustomData": "#!/bin/bash\nset -eu\nset -o pipefail\nset +o histexpand\nexec > /var/log/azure-arm-customData.log 2>&1\nsystemctl stop update-engine\nsystemctl mask update-engine\nsystemctl stop locksmithd\nsystemctl mask locksmithd\ntimedatectl set-ntp true\nsystemctl restart systemd-timesyncd\necho $(ifconfig eth0|grep 'inet ' | awk '{print $2}') $(hostname) >> /etc/hosts\nmkdir -p /tmp/dcos\ncd /tmp/dcos\nCURL_EXIT_CODE=99\nset +e\nwhile [[ $CURL_EXIT_CODE -ne 0 ]]; do curl -O http://10.0.0.5/dcos_install.sh; CURL_EXIT_CODE=$?; sleep 5; done\nset -e\nchmod +x dcos_install.sh\n./dcos_install.sh slave\n",
+    "publicAgentCustomData": "#!/bin/bash\nset -eu\nset -o pipefail\nset +o histexpand\nexec > /var/log/azure-arm-customData.log 2>&1\nsystemctl stop update-engine\nsystemctl mask update-engine\nsystemctl stop locksmithd\nsystemctl mask locksmithd\ntimedatectl set-ntp true\nsystemctl restart systemd-timesyncd\necho $(ifconfig eth0|grep 'inet ' | awk '{print $2}') $(hostname) >> /etc/hosts\nmkdir -p /tmp/dcos\ncd /tmp/dcos\nCURL_EXIT_CODE=99\nset +e\nwhile [[ $CURL_EXIT_CODE -ne 0 ]]; do curl -O http://10.0.0.5/dcos_install.sh; CURL_EXIT_CODE=$?; sleep 5; done\nset -e\nchmod +x dcos_install.sh\n./dcos_install.sh slave_public\n",
     "jumpDomainNameLabel": "[toLower(concat('jump', uniqueString('A8iCfaZ3ud2Hv1MggdV2/iGCGGgZCQy3jcO6u4+htp8=', resourceGroup().id, parameters('location'))))]",
     "masterLBDomainNameLabel": "[toLower(concat('dcos', uniqueString('tgIMCbmp0YowvqphEkIrVJ7IMeALlz0sSt7ZC5zjkDY=', resourceGroup().id, parameters('location'))))]",
     "publicAgentLBDomainNameLabel": "[toLower(concat('pa', uniqueString('u6sl74enR64SY2Be/spoDTbGX3I67hMqTdG1hEMHk78=', resourceGroup().id, parameters('location'))))]",
