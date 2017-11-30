@@ -64,7 +64,7 @@ securityMode:
 
 dcosPassword: 
 
-     new password for dcosadmin user 
+     new password for bootstrapuser user 
 
 dcosInstallerURL (Get this from your Mesosphere sales engineer):
 
@@ -92,6 +92,8 @@ Click on the masterLBPIP object and view the details.
 Copy the DNS name and paste it into your web browser's address bar to display the DC/OS Dashboard log in page.
 
 NOTE: You may have to hit the "Refresh" button several times to get the login prompt.
+
+When prompted for a user id and password, enter the user "bootstrapuser" and then the dcosPassword you provided when you launched the cluster with the ARM template.
 
 ![Alt text](/resources/dcos_azure_login.jpg?raw=true "DC/OS Dashboard Login Screen")
 
