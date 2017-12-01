@@ -82,10 +82,15 @@ publicAgentCount:
 
      [1] 1
 
+When your DC/OS cluster is successfully deployed, you can continue to the next step to access your cluster.
 
 # Step 4 - Access the Enterprise DC/OS Cluster
 
-When the DC/OS cluster is up and running, go to your Azure Console and open the resource group you created to contain these resources and look for the master load balancer public ip address (masterLBPIP) object.
+When the DC/OS cluster is up and running, you can get the public ip address of your jump server by using the following AZ command:
+
+     $ az network public-ip show -g My-Proj-DCOS-Group-1 -n masterLBPIP --query "{ fqdn:dnsSettings.fqdn, address: ipAddress }"
+
+Or, you can go to your Azure Console and open the resource group you created to contain these resources and look for the master load balancer public ip address (masterLBPIP) object.
 
 Click on the masterLBPIP object and view the details.
 
@@ -98,6 +103,10 @@ When prompted for a user id and password, enter the user "bootstrapuser" and the
 ![Alt text](/resources/dcos_azure_login.jpg?raw=true "DC/OS Dashboard Login Screen")
 
 # Step 5 - Access your DC/OS cluster nodes via SSH
+
+When the DC/OS cluster is up and running, you can get the public ip address of your jump server by using the following AZ command:
+
+     $ az network public-ip show -g My-Proj-DCOS-Group-1 -n jumpPIP --query "{ fqdn:dnsSettings.fqdn, address: ipAddress }"
 
 SSH to the Azure jump server for this cluster
 
