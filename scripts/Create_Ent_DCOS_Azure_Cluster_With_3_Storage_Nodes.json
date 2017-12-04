@@ -71,7 +71,7 @@
       "metadata": {
         "description": "DC/OS Enterprise URL. (default: DC/OS 1.10.0)"
       },
-      "type": "string"
+      "type": "securestring"
     },
     "dcosClusterName": {
       "metadata": {
