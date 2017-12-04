@@ -84,7 +84,65 @@ publicAgentCount:
 
 When your DC/OS cluster is successfully deployed, you can continue to the next step to access your cluster.
 
-# Step 4 - Access the Enterprise DC/OS Cluster
+NOTE ON RUNNING SMACK STACK: 
+
+If you want to run the SMACK Stack on this cluster (Spark, Mesos, Akka, Kafka, and Cassandra) plus Apache Hadoop HDFS, you may want to deploy the DC/OS cluster with a sub-set of private agent nodes that are configured as "storage nodes". In that case, you can use the Azure ARM template Create_Ent_DCOS_Azure_Cluster_With_3_Storage_Nodes.json to deploy an additional 3 private agent nodes that have 3 "data disks" attached to them. The new ARM template will prompt you for two new parameters:
+
+    - privateAgentStorageNodeCount
+
+    - storageNodeDataDiskSizeInGB
+
+To use the SMACK Stack oriented ARM template, follow these instructions:
+
+Create a new Azure Resource Group to contain this new DC/OS Cluster's resources
+
+     $ az group create --location westus --name My-Proj-DCOS-Group-1
+
+Deploy a new Enterprise DC/OS cluster using the ARM template
+
+     $ az group deployment create --name My-Proj-DCOS-Cluster-1 --resource-group My-Proj-DCOS-Group-1 --template-file Create_Ent_DCOS_Azure_Cluster_With_3_Storage_Nodes.json | tee /tmp/az-deployment1.out
+
+During this process, you will be prompted for the following paramters:
+
+Please provide int value for 'privateAgentStorageNodeCount' (? for help):
+ [1] 1
+ [2] 2
+ [3] 3
+ [4] 4
+ [5] 5
+ [6] 6
+ [7] 7
+ [8] 8
+ [9] 9
+ [10] 10
+ [11] 15
+ [12] 20
+ [13] 30
+ [14] 0
+Please enter a choice [1]: 3
+
+Please provide int value for 'storageNodeDataDiskSizeInGB' (? for help):
+ [1] 100
+ [2] 200
+ [3] 300
+ [4] 400
+ [5] 500
+ [6] 700
+ [7] 900
+ [8] 1024
+ [9] 2048
+ [10] 3096
+Please enter a choice [1]: 1
+
+In the screen shot below, you can see that this private agent node has two things that are new:
+
+- A new Mesos Attribute named STORAGE_NODE with a value of TRUE. This can be used later, when you want to start up a task and want it to run on the storage node types.
+
+- A larger disk volume size. This new ARM template creates 3 data disks on each storage node with a minimum disk volume size of 100GB. So in this screen shot, you can see over 300GB available. The 23 GB general ROOT type volume storage, not MOUNT type volume storage available on the agent node.
+
+![Alt text](/resources/Storage-Node.jpg?raw=true "DC/OS Storage Node Details")
+
+# Step 4. Access the Enterprise DC/OS Cluster
 
 When the DC/OS cluster is up and running, you can get the public ip address of your jump server by using the following AZ command:
 
@@ -102,7 +160,7 @@ When prompted for a user id and password, enter the user "bootstrapuser" and the
 
 ![Alt text](/resources/dcos_azure_login.jpg?raw=true "DC/OS Dashboard Login Screen")
 
-# Step 5 - Access your DC/OS cluster nodes via SSH
+# Step 5. Access your DC/OS cluster nodes via SSH
 
 When the DC/OS cluster is up and running, you can get the public ip address of your jump server by using the following AZ command:
 
@@ -132,7 +190,7 @@ SSH to one of your masters
 
      $ ssh -i ~/.ssh/defaultkey.key core@master-node-private-ip-address
 
-# Step 6 - Destroy your Azure DC/OS Cluster
+# Step 6. Destroy your Azure DC/OS Cluster
 
 Destroy the Azure resource group 
 
