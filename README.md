@@ -44,7 +44,7 @@ Deploy a new Enterprise DC/OS cluster using the ARM template
 
 $ az group deployment create --name My-Proj-DCOS-Cluster-1 --resource-group My-Proj-DCOS-Group-1 --template-file Create_Ent_DCOS_Azure_Cluster.json | tee /tmp/az-deployment1.out
 
-During this process, you will be prompted for the following paramters:
+During this process, you will be prompted for the following parameters:
 
 SSHPublicKey:
 
@@ -102,7 +102,7 @@ Deploy a new Enterprise DC/OS cluster using the ARM template
 
      $ az group deployment create --name My-Proj-DCOS-Cluster-1 --resource-group My-Proj-DCOS-Group-1 --template-file Create_Ent_DCOS_Azure_Cluster_With_3_Storage_Nodes.json | tee /tmp/az-deployment1.out
 
-During this process, you will be prompted for the following paramters:
+During this process, you will be prompted for the following parameters:
 
 Please provide int value for 'privateAgentStorageNodeCount' (? for help):
  [1] 1
