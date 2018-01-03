@@ -1,0 +1,1370 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#", 
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "SSHPublicKey": {
+      "metadata": {
+        "description": "Public RSA key to SSH into the jump server."
+      },
+      "type": "securestring"
+    },
+    "customerKey": {
+      "metadata": {
+        "description": "DC/OS Enterprise customer key."
+      },
+      "type": "securestring"
+    },
+    "securityMode": {
+      "metadata": {
+        "description": "DC/OS Enterprise security mode (permissive or strict)."
+      },
+      "type": "string",
+      "allowedValues": [
+        "permissive",
+        "strict"
+      ]
+    },
+    "dcosUsername": {
+      "metadata": {
+        "description": "DC/OS Superuser username."
+      },
+      "defaultValue": "bootstrapuser",
+      "type": "string"
+    },
+    "dcosPassword": {
+      "metadata": {
+        "description": "DC/OS Superuser password."
+      },
+      "type": "securestring"
+    },
+    "oauthEnabled": {
+      "metadata": {
+        "description": "Enable OAuth. Must be `true` or `false`."
+      },
+      "defaultValue": "false",
+      "type": "string",
+      "allowedValues": [
+        "true",
+        "false"
+      ]
+    },
+
+    "disablePasswordAuthentication": {
+      "metadata": {
+        "description": "Disable password login. Must be `true` or `false`. If set to `false`, please override `adminPassword` with something more secure."
+      },
+      "defaultValue": "true",
+      "type": "string",
+      "allowedValues": [
+        "true",
+        "false"
+      ]
+    },
+    "adminPassword": {
+      "metadata": {
+        "description": "`core` user SSH password. By default password authentication is disabled and this is not useful. Please override `disablePasswordAuthentication` with `false` to use."
+      },
+      "defaultValue": "",
+      "type": "securestring"
+    },
+    "dcosInstallerURL": {
+      "metadata": {
+        "description": "DC/OS Enterprise URL. (default: DC/OS 1.10.0)"
+      },
+      "type": "securestring"
+    },
+    "dcosClusterName": {
+      "metadata": {
+        "description": "DC/OS Cluster name."
+      },
+      "type": "string"
+    },
+    "privateAgentCount": {
+      "metadata": {
+        "description": "The number DC/OS Private Agents for this cluster (not including storage nodes)."
+      },
+      "allowedValues": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        20,
+        30,
+        40,
+        50,
+        100
+      ],
+      "type": "int"
+    },
+    "privateAgentStorageNodeCount": {
+      "metadata": {
+        "description": "The number DC/OS Private Agents for this cluster that will storage data for HDFS, Kafka, Cassandra and others.."
+      },
+      "allowedValues": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        15,
+        20,
+        30,
+        0
+      ],
+      "type": "int"
+    },
+    "storageNodeDataDiskSizeInGB": {
+      "type": "string",
+      "metadata": {
+        "description": "Size of each data disk in GB for the storage nodes - There will be 4 disks per node."
+      },
+      "allowedValues": [
+      100,
+      200,
+      300,
+      400,
+      500,
+      700,
+      900,
+      1024,
+      2048,
+      3096
+      ],
+      "type": "int"
+    },
+    "publicAgentCount": {
+      "metadata": {
+        "description": "The number DC/OS Public Agents for this cluster."
+      },
+      "allowedValues": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        0
+      ],
+      "type": "int"
+    },
+    "privateAgentVMSize": {
+      "metadata": {
+        "description": "The size of the Private Agent Virtual Machine."
+      },
+      "defaultValue": "Standard_D12_v2",
+      "type": "string"
+    },
+    "privateAgentStorageNodeVMSize": {
+      "metadata": {
+        "description": "The size of the Private Agent Storage Node Virtual Machine."
+      },
+      "defaultValue": "Standard_D12_v2",
+      "type": "string"
+    },
+    "publicAgentVMSize": {
+      "metadata": {
+        "description": "The size of the Public Agent Virtual Machine."
+      },
+      "defaultValue": "Standard_D2_v2",
+      "type": "string"
+    },
+    "location": {
+        "metadata": {
+            "description": "Region to deploy DC/OS resources to."
+        },
+        "defaultValue": "West US",
+        "type": "string"
+    },
+    "mesosphereTags": {
+      "type": "object",
+      "defaultValue": {
+        "provider": "6A26FDE0-460D-4138-92F3-20D45B67DC2A"
+      }
+    }
+  },
+  "variables": {
+    "singleQuote": "'",
+    "dcosVirtualNetworkID": "[resourceId('Microsoft.Network/virtualNetworks', 'dcosVirtualNetwork')]",
+    "dcosSubnetID": "[concat(variables('dcosVirtualNetworkID'), '/subnets/', 'dcosSubnet')]",
+    "masterSubnet": "[concat(variables('dcosVirtualNetworkID'), '/subnets/', 'dcos-masterSubnet')]",
+    "agentPrivateSubnet": "[concat(variables('dcosVirtualNetworkID'), '/subnets/', 'dcos-agentPrivateSubnet')]",
+    "agentPublicSubnet": "[concat(variables('dcosVirtualNetworkID'), '/subnets/', 'dcos-agentPublicSubnet')]",
+    "jumpCustomData": "#!/bin/bash\nset -eu\nset -o pipefail\nset +o histexpand\nexec > /var/log/azure-arm-customData.log 2>&1\nsystemctl stop update-engine\nsystemctl mask update-engine\nsystemctl stop locksmithd\nsystemctl mask locksmithd\ntimedatectl set-ntp true\nsystemctl restart systemd-timesyncd\n",
+    "masterCustomData": "#!/bin/bash\nset -eu\nset -o pipefail\nset +o histexpand\nexec > /var/log/azure-arm-customData.log 2>&1\nsystemctl stop update-engine\nsystemctl mask update-engine\nsystemctl stop locksmithd\nsystemctl mask locksmithd\ntimedatectl set-ntp true\nsystemctl restart systemd-timesyncd\necho $(ifconfig eth0|grep 'inet ' | awk '{print $2}') $(hostname) >> /etc/hosts\nmkdir -p /tmp/dcos\ncd /tmp/dcos\nCURL_EXIT_CODE=99\nset +e\nwhile [[ $CURL_EXIT_CODE -ne 0 ]]; do curl -O http://10.0.0.5/dcos_install.sh; CURL_EXIT_CODE=$?; sleep 5; done\nset -e\nchmod +x dcos_install.sh\n./dcos_install.sh master\n",
+    "agentCustomData": "#!/bin/bash\nset -eu\nset -o pipefail\nset +o histexpand\nexec > /var/log/azure-arm-customData.log 2>&1\nsystemctl stop update-engine\nsystemctl mask update-engine\nsystemctl stop locksmithd\nsystemctl mask locksmithd\ntimedatectl set-ntp true\nsystemctl restart systemd-timesyncd\necho $(ifconfig eth0|grep 'inet ' | awk '{print $2}') $(hostname) >> /etc/hosts\nmkdir -p /tmp/dcos\ncd /tmp/dcos\nCURL_EXIT_CODE=99\nset +e\nwhile [[ $CURL_EXIT_CODE -ne 0 ]]; do curl -O http://10.0.0.5/dcos_install.sh; CURL_EXIT_CODE=$?; sleep 5; done\nset -e\nchmod +x dcos_install.sh\n./dcos_install.sh slave\n",
+    "agentStorageNodeCustomData": "#!/bin/bash\nset -eu\nset -o pipefail\nset +o histexpand\nexec > /var/log/azure-arm-customData.log 2>&1\nsystemctl stop update-engine\nsystemctl mask update-engine\nsystemctl stop locksmithd\nsystemctl mask locksmithd\ntimedatectl set-ntp true\nsystemctl restart systemd-timesyncd\necho $(ifconfig eth0|grep 'inet ' | awk '{print $2}') $(hostname) >> /etc/hosts\nset +e\nsleep 60\nnum=0; for device in /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj /dev/sdk; do echo; echo \"### Setting up ${device} for /dcos/volume${num} ###\"; echo; parted -s ${device} mklabel gpt mkpart P1 ext4 0GB 100%; mkfs.xfs -f ${device}1; mkdir -p /dcos/volume${num}; mount ${device}1 /dcos/volume${num}; echo -e \"[Unit]\nBefore=dcos-mesos-slave.service\n\n[Mount]\nWhat=${device}1\nWhere=/dcos/volume${num}\nOptions=defaults,noatime,noexec\n\n[Install]\nWantedBy=dcos-mesos-slave.service\n\" > /etc/systemd/system/dcos-volume${num}.mount; systemctl enable dcos-volume${num}.mount; ((num++)); done\nset -e\nmkdir -p /var/lib/dcos\necho \"MESOS_ATTRIBUTES=STORAGE_NODE:TRUE\" > /var/lib/dcos/mesos-slave-common\nmkdir -p /tmp/dcos\ncd /tmp/dcos\nCURL_EXIT_CODE=99\nset +e\nwhile [[ $CURL_EXIT_CODE -ne 0 ]]; do curl -O http://10.0.0.5/dcos_install.sh; CURL_EXIT_CODE=$?; sleep 5; done\nset -e\nchmod +x dcos_install.sh\n./dcos_install.sh slave\n",
+    "publicAgentCustomData": "#!/bin/bash\nset -eu\nset -o pipefail\nset +o histexpand\nexec > /var/log/azure-arm-customData.log 2>&1\nsystemctl stop update-engine\nsystemctl mask update-engine\nsystemctl stop locksmithd\nsystemctl mask locksmithd\ntimedatectl set-ntp true\nsystemctl restart systemd-timesyncd\necho $(ifconfig eth0|grep 'inet ' | awk '{print $2}') $(hostname) >> /etc/hosts\nmkdir -p /tmp/dcos\ncd /tmp/dcos\nCURL_EXIT_CODE=99\nset +e\nwhile [[ $CURL_EXIT_CODE -ne 0 ]]; do curl -O http://10.0.0.5/dcos_install.sh; CURL_EXIT_CODE=$?; sleep 5; done\nset -e\nchmod +x dcos_install.sh\n./dcos_install.sh slave_public\n",
+    "jumpDomainNameLabel": "[toLower(concat('jump', uniqueString('A8iCfaZ3ud2Hv1MggdV2/iGCGGgZCQy3jcO6u4+htp8=', resourceGroup().id, parameters('location'))))]",
+    "masterLBDomainNameLabel": "[toLower(concat('dcos', uniqueString('tgIMCbmp0YowvqphEkIrVJ7IMeALlz0sSt7ZC5zjkDY=', resourceGroup().id, parameters('location'))))]",
+    "publicAgentLBDomainNameLabel": "[toLower(concat('pa', uniqueString('u6sl74enR64SY2Be/spoDTbGX3I67hMqTdG1hEMHk78=', resourceGroup().id, parameters('location'))))]",
+    "storageAccountName": "[toLower(concat('sa', uniqueString('QahXIPGBg50dEHhrXe6ticAHUeEbqZhLj1HEFiu/pKg=', resourceGroup().id, parameters('location'))))]",
+   "jumpboxNSGName": "[toLower(uniqueString(concat(resourceGroup().id, parameters('dcosClusterName'), '-jumpbox-nsg')))]",
+   "jumpboxNSGID": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('jumpboxNSGName'))]",
+    "storageApiVersion": "2017-06-01",
+    "computeApiVersion": "2017-03-30",
+    "networkApiVersion": "2017-04-01",
+    "masterCount": 3,
+    "masterLBID": "[resourceId('Microsoft.Network/loadBalancers','masterLB')]",
+    "publicAgentLBID": "[resourceId('Microsoft.Network/loadBalancers','publicAgentLB')]",
+    "vmSizesMap": {
+      "Standard_D4": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D12_v2": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_A4": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_DS4": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_GS4": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_A3": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D14_v2": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_A2": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D11_v2": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_A6": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_GS2": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_D12": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_A9": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_A10": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D2": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_A8": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_G4": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_DS14": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS13": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_G5": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D1_v2": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D14": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D5_v2": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D11": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_DS2": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS1": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_GS3": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_GS1": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_G2": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D4_v2": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_DS3": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS11": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_D3_v2": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_GS5": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_A1": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_A1_v2": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D3": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_A7": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_A5": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D2_v2": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_G1": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_A0": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_DS12": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_D13": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_G3": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D1": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_A11": {
+        "storageAccountType": "Standard_LRS"
+      },
+      "Standard_D13_v2": {
+        "storageAccountType": "Standard_LRS"
+      }
+    }
+  },
+  "resources": [
+    {
+     "apiVersion": "[variables('networkApiVersion')]",
+      "location": "[parameters('location')]",
+      "name": "[variables('jumpboxNSGName')]",
+      "properties": {
+          "securityRules": [
+          {
+              "name": "ssh",
+              "properties": {
+              "access": "Allow",
+              "description": "Allow SSH",
+              "destinationAddressPrefix": "*",
+              "destinationPortRange": "22",
+              "direction": "Inbound",
+              "priority": 200,
+              "protocol": "Tcp",
+              "sourceAddressPrefix": "*",
+              "sourcePortRange": "*"
+              }
+          }
+          ]
+      },
+      "type": "Microsoft.Network/networkSecurityGroups",
+       "tags": {
+        "provider": "[toUpper(parameters('mesosphereTags').provider)]"
+      }
+     },
+    {
+      "name": "[variables('storageAccountName')]",
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "[variables('storageApiVersion')]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "Storage",
+      "location": "[parameters('location')]",
+      "tags": {
+        "displayName": "MesosphereStorageAccount",
+        "provider": "[toUpper(parameters('mesosphereTags').provider)]"
+      }
+    },
+   {
+            "apiVersion": "[variables('networkApiVersion')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "location": "[parameters('location')]",
+            "name": "masterNSG",
+            "properties": {
+                "securityRules": [
+                    {
+                        "properties": {
+                            "sourceAddressPrefix": "*",
+                            "priority": 200,
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "22",
+                            "access": "Allow",
+                            "description": "Allow SSH",
+                            "direction": "Inbound",
+                            "sourcePortRange": "*",
+                            "protocol": "Tcp"
+                        },
+                        "name": "ssh"
+                    },
+                    {
+                        "properties": {
+                            "sourceAddressPrefix": "*",
+                            "priority": 201,
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "2222",
+                            "access": "Allow",
+                            "description": "Allow SSH",
+                            "direction": "Inbound",
+                            "sourcePortRange": "*",
+                            "protocol": "Tcp"
+                        },
+                        "name": "sshPort22"
+                    },
+                    {
+                        "properties": {
+                            "sourceAddressPrefix": "*",
+                            "priority": 202,
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "80",
+                            "access": "Allow",
+                            "description": "HTTP Port 80",
+                            "direction": "Inbound",
+                            "sourcePortRange": "*",
+                            "protocol": "Tcp"
+                        },
+                        "name": "httpPort80"
+                    },
+                    {
+                        "properties": {
+                            "sourceAddressPrefix": "*",
+                            "priority": 203,
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "443",
+                            "access": "Allow",
+                            "description": "HTTPS Port 443",
+                            "direction": "Inbound",
+                            "sourcePortRange": "*",
+                            "protocol": "Tcp"
+                        },
+                        "name": "httpsPort443"
+                    },
+                    {
+                        "properties": {
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "priority": 204,
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "*",
+                            "access": "Allow",
+                            "description": "Allow Any-Any access from within the VNET",
+                            "direction": "Inbound",
+                            "sourcePortRange": "*",
+                            "protocol": "Tcp"
+                        },
+                        "name": "internalAnyAny"
+                    }
+                ]
+            },
+           "tags": {
+            "displayName": "MesosphereMasterNSG",
+            "provider": "[toUpper(parameters('mesosphereTags').provider)]"
+          }
+        },
+        {
+            "apiVersion": "[variables('networkApiVersion')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "location": "[parameters('location')]",
+            "name": "agentPrivateNSG",
+            "properties": {
+                "securityRules": [
+                    {
+                        "properties": {
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "priority": 200,
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "*",
+                            "access": "Allow",
+                            "description": "Allow Any-Any access from within the VNET",
+                            "direction": "Inbound",
+                            "sourcePortRange": "*",
+                            "protocol": "Tcp"
+                        },
+                        "name": "internalAnyAny"
+                    }
+                ]
+            },
+           "tags": {
+            "displayName": "MesosphereAgentPrivateNSG",
+            "provider": "[toUpper(parameters('mesosphereTags').provider)]"
+          }
+        },
+        {
+            "apiVersion": "[variables('networkApiVersion')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "location": "[parameters('location')]",
+            "name": "agentPublicNSG",
+            "properties": {
+                "securityRules": [
+                    {
+                        "properties": {
+                            "sourceAddressPrefix": "Internet",
+                            "priority": 200,
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "80",
+                            "access": "Allow",
+                            "description": "Allow HTTP traffic from the Internet to Public Agents",
+                            "direction": "Inbound",
+                            "sourcePortRange": "*",
+                            "protocol": "*"
+                        },
+                        "name": "Allow_HTTP"
+                    },
+                    {
+                        "properties": {
+                            "sourceAddressPrefix": "Internet",
+                            "priority": 300,
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "443",
+                            "access": "Allow",
+                            "description": "Allow HTTPS traffic from the Internet to Public Agents",
+                            "direction": "Inbound",
+                            "sourcePortRange": "*",
+                            "protocol": "*"
+                        },
+                        "name": "Allow_HTTPS"
+                    },
+                    {
+                        "properties": {
+                            "sourceAddressPrefix": "Internet",
+                            "priority": 400,
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "8080",
+                            "access": "Allow",
+                            "description": "Allow 8080 traffic from the Internet to Public Agents",
+                            "direction": "Inbound",
+                            "sourcePortRange": "*",
+                            "protocol": "*"
+                        },
+                        "name": "Allow_8080"
+                    },
+                    {
+                        "properties": {
+                            "sourceAddressPrefix": "VirtualNetwork",
+                            "priority": 500,
+                            "destinationAddressPrefix": "*",
+                            "destinationPortRange": "*",
+                            "access": "Allow",
+                            "description": "Allow Any-Any access from within the VNET",
+                            "direction": "Inbound",
+                            "sourcePortRange": "*",
+                            "protocol": "Tcp"
+                        },
+                        "name": "internalAnyAny"
+                    }
+                ]
+            },
+           "tags": {
+            "displayName": "MesosphereAgentPublicNSG",
+            "provider": "[toUpper(parameters('mesosphereTags').provider)]"
+          }
+        },
+        {
+        "apiVersion": "[variables('networkApiVersion')]",
+        "properties": {
+            "subnets": [
+                {
+                    "properties": {
+                        "addressPrefix": "10.32.0.0/22",
+                        "networkSecurityGroup": {
+                            "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'masterNSG')]"
+                        }
+                    },
+                    "name": "dcos-masterSubnet"
+                },
+                {
+                    "properties": {
+                        "addressPrefix": "10.32.4.0/22",
+                        "networkSecurityGroup": {
+                            "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'agentPublicNSG')]"
+                        }
+                    },
+                    "name": "dcos-agentPublicSubnet"
+                },
+                {
+                    "properties": {
+                        "addressPrefix": "10.32.8.0/22",
+                        "networkSecurityGroup": {
+                            "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'agentPrivateNSG')]"
+                        }
+                    },
+                    "name": "dcos-agentPrivateSubnet"
+                },
+                {
+                    "name": "dcosSubnet",
+                    "properties": {
+                    "addressPrefix": "10.0.0.0/24"
+                }
+              }
+            ],
+            "addressSpace": {
+                "addressPrefixes": [
+                    "10.32.0.0/16",
+                    "10.0.0.0/18"
+                ]
+            }
+        },
+        "dependsOn": [
+            "[concat('Microsoft.Network/networkSecurityGroups/', 'agentPublicNSG')]",
+            "[concat('Microsoft.Network/networkSecurityGroups/', 'agentPrivateNSG')]",
+            "[concat('Microsoft.Network/networkSecurityGroups/', 'masterNSG')]"
+        ],
+        "type": "Microsoft.Network/virtualNetworks",
+        "location": "[parameters('location')]",
+        "name": "dcosVirtualNetwork"
+    },
+    {
+      "name": "jumpPIP",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "[variables('networkApiVersion')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "publicIPAllocationMethod": "Static",
+        "dnsSettings": {
+          "domainNameLabel": "[variables('jumpDomainNameLabel')]"
+        }
+      },
+      "tags": {
+        "displayName": "MesosphereJumpPip",
+        "provider": "[toUpper(parameters('mesosphereTags').provider)]"
+      }
+    },
+    {
+      "name": "jumpNIC",
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "[variables('networkApiVersion')]",
+      "dependsOn": [
+        "[variables('jumpboxNSGID')]",
+        "[resourceId('Microsoft.Network/virtualNetworks', 'dcosVirtualNetwork')]",
+        "[resourceId('Microsoft.Network/publicIPAddresses', 'jumpPIP')]"
+      ],
+      "location": "[parameters('location')]",
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipConfig",
+            "properties": {
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "10.0.0.4",
+              "subnet": {
+                "id": "[variables('dcosSubnetID')]"
+              },
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'jumpPIP')]"
+              }
+            }
+          }
+          ],
+          "networkSecurityGroup": {
+              "id": "[variables('jumpboxNSGID')]"
+          }
+      },
+      "tags": {
+        "displayName": "MesosphereJumpNic",
+        "provider": "[toUpper(parameters('mesosphereTags').provider)]"
+      }
+    },
+    {
+      "name": "jumpVM",
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "[variables('computeApiVersion')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', 'jumpNIC')]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "Standard_A1"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "Canonical",
+            "offer": "UbuntuServer",
+            "sku": "16.04-LTS",
+            "version": "latest"
+          },
+          "osDisk": {
+            "name": "jumpVMDisk",
+            "createOption": "FromImage",
+            "managedDisk": {
+              "storageAccountType": "Standard_LRS"
+            }
+          }
+        },
+        "osProfile": {
+          "computerName": "jumpVM",
+          "adminUsername": "core",
+          "adminPassword": "[parameters('adminPassword')]",
+          "customData": "[base64(variables('jumpCustomData'))]",
+          "linuxConfiguration": {
+            "disablePasswordAuthentication": "[parameters('disablePasswordAuthentication')]",
+            "ssh": {
+              "publicKeys": [
+                {
+                  "path": "[concat('/home/', 'core', '/.ssh/authorized_keys')]",
+                  "keyData": "[parameters('SSHPublicKey')]"
+                }
+              ]
+            }
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', 'jumpNIC')]"
+            }
+          ]
+        }
+      },
+      "resources": [
+        {
+          "name": "jumpVM/Microsoft.Azure.Extensions",
+          "type": "Microsoft.Compute/virtualMachines/extensions",
+          "apiVersion": "[variables('computeApiVersion')]",
+          "location": "[parameters('location')]",
+          "dependsOn": [
+            "Microsoft.Compute/VirtualMachines/jumpVM"
+          ],
+          "properties": {
+            "publisher": "Microsoft.Azure.Extensions",
+            "type": "CustomScript",
+            "typeHandlerVersion": "2.0",
+            "autoUpgradeMinorVersion": true,
+            "settings": {
+              "commandToExecute": "[concat('CURL_EXIT_CODE=99; while [ $CURL_EXIT_CODE -ne 60 ]; do curl https://', reference('masterLBPIP').dnsSettings.fqdn, '; CURL_EXIT_CODE=$?; sleep 5; done')]"
+            }
+          }
+        }
+      ],
+      "tags": {
+        "displayName": "MesosphereJumpVM",
+        "provider": "[toUpper(parameters('mesosphereTags').provider)]"
+      }
+    },
+    {
+      "name": "bootstrapNIC",
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "[variables('networkApiVersion')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', 'dcosVirtualNetwork')]"
+      ],
+      "location": "[parameters('location')]",
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipConfig",
+            "properties": {
+              "privateIPAllocationMethod": "Static",
+              "privateIPAddress": "10.0.0.5",
+              "subnet": {
+                "id": "[variables('dcosSubnetID')]"
+              }
+            }
+          }
+        ]
+      },
+      "tags": {
+        "displayName": "MesosphereBootstrapNic",
+        "provider": "[toUpper(parameters('mesosphereTags').provider)]"
+      }
+    },
+    {
+      "name": "bootstrapVM",
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "[variables('computeApiVersion')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', 'bootstrapNIC')]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "Standard_A2"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "CoreOS",
+            "offer": "CoreOS",
+            "sku": "Stable",
+            "version": "1235.9.0"
+          },
+          "osDisk": {
+            "name": "bootstrapVMDisk",
+            "createOption": "FromImage",
+            "managedDisk": {
+              "storageAccountType": "Standard_LRS"
+            }
+          }
+        },
+        "osProfile": {
+          "computerName": "bootstrapVM",
+          "adminUsername": "core",
+          "adminPassword": "[parameters('adminPassword')]",
+          "customData": "[base64(concat('#!/bin/bash\nset -eu\nset -o pipefail\nset +o histexpand\nexec > /var/log/azure-arm-customData.log 2>&1\nsystemctl stop update-engine\nsystemctl mask update-engine\nsystemctl stop locksmithd\nsystemctl mask locksmithd\ntimedatectl set-ntp true\nsystemctl restart systemd-timesyncd\nmkdir -p /opt/dcos/genconf/\ncd /opt/dcos/\ncurl ', parameters('dcosInstallerURL'), ' -o dcos_generate_config.ee.sh --retry 3\nchmod +x dcos_generate_config.ee.sh\nbash dcos_generate_config.ee.sh --version\nHASHED_PASSWORD=$(bash dcos_generate_config.ee.sh --hash-password ', variables('singleQuote'), parameters('dcosPassword'), variables('singleQuote'), ')\ntee /opt/dcos/genconf/config.yaml <<EOF\n---\nbootstrap_url: http://10.0.0.5:80\ncluster_name: ', parameters('dcosClusterName'), '\ncustomer_key: ', parameters('customerKey'), '\nexhibitor_storage_backend: azure\nexhibitor_azure_account_name: ', variables('storageAccountName'), '\nexhibitor_azure_account_key: ', listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), variables('storageApiVersion')).keys[0].value, '\nexhibitor_azure_prefix: exhibitor\nip_detect_filename: /genconf/ip-detect\nmaster_discovery: static\nmaster_list:\n- 10.32.0.4\n- 10.32.0.5\n- 10.32.0.6\nresolvers:\n- 8.8.8.8\n- 8.8.4.4\noauth_enabled: ', parameters('oauthEnabled'), '\nsecurity: ', parameters('securityMode'), '\ntelemetry_enabled: false\ncheck_time: false\nsuperuser_username: ', parameters('dcosUsername'), '\nsuperuser_password_hash: $HASHED_PASSWORD\nEOF\ntee /opt/dcos/genconf/ip-detect <<EOF\n#!/bin/bash\nset -o nounset -o errexit\ncurl -H Metadata:true -fsSL \"http://169.254.169.254/metadata/instance/network/interface/0/ipv4/ipAddress/0/privateIpAddress?api-version=2017-04-02&format=text\"\nEOF\n\n./dcos_generate_config.ee.sh\ndocker run -d --restart=always -p 80:80 -v /opt/dcos/genconf/serve:/usr/share/nginx/html:ro nginx:alpine\n'))]",
+          "linuxConfiguration": {
+            "disablePasswordAuthentication": "[parameters('disablePasswordAuthentication')]",
+            "ssh": {
+              "publicKeys": [
+                {
+                  "path": "[concat('/home/', 'core', '/.ssh/authorized_keys')]",
+                  "keyData": "[parameters('SSHPublicKey')]"
+                }
+              ]
+            }
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', 'bootstrapNIC')]"
+            }
+          ]
+        }
+      },
+      "tags": {
+        "displayName": "MesosphereBootstrapVm",
+        "provider": "[toUpper(parameters('mesosphereTags').provider)]"
+      }
+    },
+    {
+      "name": "agentVMSS",
+      "type": "Microsoft.Compute/virtualMachineScaleSets",
+      "apiVersion": "[variables('computeApiVersion')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', 'dcosVirtualNetwork')]",
+        "[resourceId('Microsoft.Compute/virtualMachineScaleSets', 'masterVMSS')]"
+      ],
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "[parameters('privateAgentVMSize')]",
+        "tier": "Standard",
+        "capacity": "[parameters('privateAgentCount')]"
+      },
+      "properties": {
+        "upgradePolicy": {
+          "mode": "Manual"
+        },
+        "virtualMachineProfile": {
+          "osProfile": {
+            "computerNamePrefix": "agentVMSS",
+            "adminUsername": "core",
+            "adminPassword": "[parameters('adminPassword')]",
+            "customData": "[base64(variables('agentCustomData'))]",
+            "linuxConfiguration": {
+              "disablePasswordAuthentication": "[parameters('disablePasswordAuthentication')]",
+              "ssh": {
+                "publicKeys": [
+                  {
+                    "path": "[concat('/home/', 'core', '/.ssh/authorized_keys')]",
+                    "keyData": "[parameters('SSHPublicKey')]"
+                  }
+                ]
+              }
+            }
+          },
+          "storageProfile": {
+            "imageReference": {
+              "publisher": "CoreOS",
+              "offer": "CoreOS",
+              "sku": "Stable",
+              "version": "1235.9.0"
+            },
+            "osDisk": {
+              "createOption": "FromImage",
+              "managedDisk": {
+                "storageAccountType": "[variables('vmSizesMap')[parameters('privateAgentVMSize')].storageAccountType]"
+              }
+            }
+          },
+          "networkProfile": {
+            "networkInterfaceConfigurations": [
+              {
+                "name": "agentNIC",
+                "properties": {
+                  "primary": true,
+                  "ipConfigurations": [
+                    {
+                      "name": "ipConfig",
+                      "properties": {
+                        "subnet": {
+                          "id": "[variables('agentPrivateSubnet')]"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "overprovision": false
+      },
+      "tags": {
+        "displayName": "MesosphereAgentVmss",
+        "provider": "[toUpper(parameters('mesosphereTags').provider)]"
+      }
+    },
+    {
+      "name": "agentStorageNodeVMSS",
+      "type": "Microsoft.Compute/virtualMachineScaleSets",
+      "apiVersion": "[variables('computeApiVersion')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', 'dcosVirtualNetwork')]",
+        "[resourceId('Microsoft.Compute/virtualMachineScaleSets', 'masterVMSS')]"
+      ],
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "[parameters('privateAgentStorageNodeVMSize')]",
+        "tier": "Standard",
+        "capacity": "[parameters('privateAgentStorageNodeCount')]"
+      },
+      "properties": {
+        "upgradePolicy": {
+          "mode": "Manual"
+        },
+        "virtualMachineProfile": {
+          "osProfile": {
+            "computerNamePrefix": "agentStorageNodeVMSS",
+            "adminUsername": "core",
+            "adminPassword": "[parameters('adminPassword')]",
+            "customData": "[base64(variables('agentStorageNodeCustomData'))]",
+            "linuxConfiguration": {
+              "disablePasswordAuthentication": "[parameters('disablePasswordAuthentication')]",
+              "ssh": {
+                "publicKeys": [
+                  {
+                    "path": "[concat('/home/', 'core', '/.ssh/authorized_keys')]",
+                    "keyData": "[parameters('SSHPublicKey')]"
+                  }
+                ]
+              }
+            }
+          },
+          "storageProfile": {
+            "imageReference": {
+              "publisher": "CoreOS",
+              "offer": "CoreOS",
+              "sku": "Stable",
+              "version": "1235.9.0"
+            },
+            "osDisk": {
+              "createOption": "FromImage",
+              "managedDisk": {
+                "storageAccountType": "[variables('vmSizesMap')[parameters('privateAgentStorageNodeVMSize')].storageAccountType]"
+              }
+            },
+            "dataDisks": [
+                {
+                  "diskSizeGB": "[parameters('storageNodeDataDiskSizeInGB')]",
+                  "lun": 0,
+                  "createOption": "Empty"
+                },
+                {
+                  "diskSizeGB": "[parameters('storageNodeDataDiskSizeInGB')]",
+                  "lun": 1,
+                  "createOption": "Empty"
+                },
+                {
+                  "diskSizeGB": "[parameters('storageNodeDataDiskSizeInGB')]",
+                  "lun": 2,
+                  "createOption": "Empty"
+                },
+                {
+                  "diskSizeGB": "[parameters('storageNodeDataDiskSizeInGB')]",
+                  "lun": 3,
+                  "createOption": "Empty"
+                }
+            ]
+          },
+          "networkProfile": {
+            "networkInterfaceConfigurations": [
+              {
+                "name": "agentStorageNodeNIC",
+                "properties": {
+                  "primary": true,
+                  "ipConfigurations": [
+                    {
+                      "name": "ipConfig",
+                      "properties": {
+                        "subnet": {
+                          "id": "[variables('agentPrivateSubnet')]"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "overprovision": false
+      },
+      "tags": {
+        "displayName": "MesosphereAgentStorageNodeVmss",
+        "provider": "[toUpper(parameters('mesosphereTags').provider)]"
+      }
+    },
+    {
+      "name": "publicAgentVMSS",
+      "type": "Microsoft.Compute/virtualMachineScaleSets",
+      "apiVersion": "[variables('computeApiVersion')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', 'dcosVirtualNetwork')]",
+        "[resourceId('Microsoft.Network/loadBalancers', 'publicAgentLB')]",
+        "[resourceId('Microsoft.Compute/virtualMachineScaleSets', 'masterVMSS')]"
+      ],
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "[parameters('publicAgentVMSize')]",
+        "tier": "Standard",
+        "capacity": "[parameters('publicAgentCount')]"
+      },
+      "properties": {
+        "upgradePolicy": {
+          "mode": "Manual"
+        },
+        "virtualMachineProfile": {
+          "osProfile": {
+            "computerNamePrefix": "publicAgentVMSS",
+            "adminUsername": "core",
+            "adminPassword": "[parameters('adminPassword')]",
+            "customData": "[base64(variables('publicAgentCustomData'))]",
+            "linuxConfiguration": {
+              "disablePasswordAuthentication": "[parameters('disablePasswordAuthentication')]",
+              "ssh": {
+                "publicKeys": [
+                  {
+                    "path": "[concat('/home/', 'core', '/.ssh/authorized_keys')]",
+                    "keyData": "[parameters('SSHPublicKey')]"
+                  }
+                ]
+              }
+            }
+          },
+          "storageProfile": {
+            "imageReference": {
+              "publisher": "CoreOS",
+              "offer": "CoreOS",
+              "sku": "Stable",
+              "version": "1235.9.0"
+            },
+            "osDisk": {
+              "createOption": "FromImage",
+              "managedDisk": {
+                "storageAccountType": "[variables('vmSizesMap')[parameters('publicAgentVMSize')].storageAccountType]"
+              }
+            }
+          },
+          "networkProfile": {
+            "networkInterfaceConfigurations": [
+              {
+                "name": "publicAgentNIC",
+                "properties": {
+                  "primary": true,
+                  "ipConfigurations": [
+                    {
+                      "name": "ipConfig",
+                      "properties": {
+                        "subnet": {
+                          "id": "[variables('agentPublicSubnet')]"
+                        },
+                        "loadBalancerBackendAddressPools": [
+                          {
+                            "id": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/loadBalancers/', 'publicAgentLB', '/backendAddressPools/', 'publicAgentBackendPool')]"
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "overprovision": false
+      },
+      "tags": {
+        "displayName": "MesospherePublicAgentVmss",
+        "provider": "[toUpper(parameters('mesosphereTags').provider)]"
+      }
+    },
+    {
+      "name": "masterVMSS",
+      "type": "Microsoft.Compute/virtualMachineScaleSets",
+      "apiVersion": "[variables('computeApiVersion')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', 'dcosVirtualNetwork')]",
+        "[resourceId('Microsoft.Network/loadBalancers', 'masterLB')]",
+        "[resourceId('Microsoft.Network/networkInterfaces', 'jumpNIC')]",
+        "[resourceId('Microsoft.Network/networkInterfaces', 'bootstrapNIC')]"
+      ],
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard_D12_V2",
+        "tier": "Standard",
+        "capacity": "[variables('masterCount')]"
+      },
+      "properties": {
+        "upgradePolicy": {
+          "mode": "Manual"
+        },
+        "virtualMachineProfile": {
+          "osProfile": {
+            "computerNamePrefix": "masterVMSS",
+            "adminUsername": "core",
+            "adminPassword": "[parameters('adminPassword')]",
+            "customData": "[base64(variables('masterCustomData'))]",
+            "linuxConfiguration": {
+              "disablePasswordAuthentication": "[parameters('disablePasswordAuthentication')]",
+              "ssh": {
+                "publicKeys": [
+                  {
+                    "path": "[concat('/home/', 'core', '/.ssh/authorized_keys')]",
+                    "keyData": "[parameters('SSHPublicKey')]"
+                  }
+                ]
+              }
+            }
+          },
+          "storageProfile": {
+            "imageReference": {
+              "publisher": "CoreOS",
+              "offer": "CoreOS",
+              "sku": "Stable",
+              "version": "1235.9.0"
+            },
+            "osDisk": {
+              "createOption": "FromImage",
+              "managedDisk": {
+                "storageAccountType": "Standard_LRS"
+              }
+            }
+          },
+          "networkProfile": {
+            "networkInterfaceConfigurations": [
+              {
+                "name": "masterNIC",
+                "properties": {
+                  "primary": true,
+                  "ipConfigurations": [
+                    {
+                      "name": "ipConfig",
+                      "properties": {
+                        "subnet": {
+                          "id": "[variables('masterSubnet')]"
+                        },
+                        "loadBalancerBackendAddressPools": [
+                          {
+                            "id": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/loadBalancers/', 'masterLB', '/backendAddressPools/', 'masterBackendPool')]"
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        },
+        "overprovision": false
+      },
+      "tags": {
+        "displayName": "MesosphereMasterVmss",
+        "provider": "[toUpper(parameters('mesosphereTags').provider)]"
+      }
+    },
+    {
+      "name": "masterLBPIP",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "[variables('networkApiVersion')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "publicIPAllocationMethod": "Static",
+        "dnsSettings": {
+          "domainNameLabel": "[variables('masterLBDomainNameLabel')]"
+        }
+      },
+      "tags": {
+        "displayName": "MesosphereMasterLbPip",
+        "provider": "[toUpper(parameters('mesosphereTags').provider)]"
+      }
+    },
+    {
+      "name": "masterLB",
+      "type": "Microsoft.Network/loadBalancers",
+      "apiVersion": "[variables('networkApiVersion')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', 'dcosVirtualNetwork')]"
+      ],
+      "properties": {
+        "frontendIPConfigurations": [
+          {
+            "properties": {
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'masterLBPIP')]"
+              }
+            },
+            "name": "ipConfig"
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "masterBackendPool"
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('masterLBID'), '/frontendIPConfigurations/ipConfig')]"
+              },
+              "backendAddressPool": {
+                "id": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/loadBalancers/', 'masterLB', '/backendAddressPools/', 'masterBackendPool')]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 80,
+              "backendPort": 80
+            },
+            "name": "http"
+          },
+          {
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('masterLBID'), '/frontendIPConfigurations/ipConfig')]"
+              },
+              "backendAddressPool": {
+                "id": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/loadBalancers/', 'masterLB', '/backendAddressPools/', 'masterBackendPool')]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 443,
+              "backendPort": 443
+            },
+            "name": "https"
+          }
+        ]
+      },
+      "tags": {
+        "displayName": "MesospherePublicAgentLb",
+        "provider": "[toUpper(parameters('mesosphereTags').provider)]"
+      }
+    },
+      {
+      "name": "publicAgentLBPIP",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "[variables('networkApiVersion')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "publicIPAllocationMethod": "Static",
+        "dnsSettings": {
+          "domainNameLabel": "[variables('publicAgentLBDomainNameLabel')]"
+        }
+      },
+      "tags": {
+        "displayName": "MesospherePublicAgentLbPip",
+        "provider": "[toUpper(parameters('mesosphereTags').provider)]"
+      }
+    },
+    {
+      "name": "publicAgentLB",
+      "type": "Microsoft.Network/loadBalancers",
+      "apiVersion": "[variables('networkApiVersion')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', 'dcosVirtualNetwork')]"
+      ],
+      "properties": {
+        "frontendIPConfigurations": [
+          {
+            "properties": {
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'publicAgentLBPIP')]"
+              }
+            },
+            "name": "ipConfig"
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "publicAgentBackendPool"
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('publicAgentLBID'), '/frontendIPConfigurations/ipConfig')]"
+              },
+              "backendAddressPool": {
+                "id": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/loadBalancers/', 'publicAgentLB', '/backendAddressPools/', 'publicAgentBackendPool')]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 80,
+              "backendPort": 80
+            },
+            "name": "http"
+          },
+          {
+            "properties": {
+              "frontendIPConfiguration": {
+                "id": "[concat(variables('publicAgentLBID'), '/frontendIPConfigurations/ipConfig')]"
+              },
+              "backendAddressPool": {
+                "id": "[concat('/subscriptions/', subscription().subscriptionId,'/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/loadBalancers/', 'publicAgentLB', '/backendAddressPools/', 'publicAgentBackendPool')]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 443,
+              "backendPort": 443
+            },
+            "name": "https"
+          }
+        ]
+      },
+      "tags": {
+        "displayName": "MesospherePublicAgentLb",
+        "provider": "[toUpper(parameters('mesosphereTags').provider)]"
+      }
+    }
+  ],
+  "outputs": {
+    "dcosLoginURL": {
+      "type": "string",
+      "value": "[concat('https://', reference('masterLBPIP').dnsSettings.fqdn)]"
+    },
+    "publicAgentURL": {
+      "type": "string",
+      "value": "[concat('https://', reference('publicAgentLBPIP').dnsSettings.fqdn)]"
+    },
+    "jumpConnectionString": {
+      "type": "string",
+      "value": "[concat('ssh -A core@', reference('jumpPIP').dnsSettings.fqdn)]"
+    }
+  }
+}

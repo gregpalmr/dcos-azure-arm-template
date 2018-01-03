@@ -86,7 +86,7 @@ When your DC/OS cluster is successfully deployed, you can continue to the next s
 
 NOTE ON RUNNING SMACK STACK: 
 
-If you want to run the SMACK Stack on this cluster (Spark, Mesos, Akka, Kafka, and Cassandra) plus Apache Hadoop HDFS, you may want to deploy the DC/OS cluster with a sub-set of private agent nodes that are configured as "storage nodes". In that case, you can use the Azure ARM template Create_Ent_DCOS_Azure_Cluster_With_3_Storage_Nodes.json to deploy an additional 3 private agent nodes that have 3 "data disks" attached to them. The new ARM template will prompt you for two new parameters:
+If you want to run the SMACK Stack on this cluster (Spark, Mesos, Akka, Kafka, and Cassandra) plus Apache Hadoop HDFS, you may want to deploy the DC/OS cluster with a sub-set of private agent nodes that are configured as "storage nodes". In that case, you can use the Azure ARM template Create_Ent_DCOS_Azure_Cluster_With_Storage_Nodes.json to deploy an additional 3 private agent nodes that have 4 "data disks" attached to them. The new ARM template will prompt you for two new parameters:
 
     - privateAgentStorageNodeCount
 
@@ -100,7 +100,7 @@ Create a new Azure Resource Group to contain this new DC/OS Cluster's resources
 
 Deploy a new Enterprise DC/OS cluster using the ARM template
 
-     $ az group deployment create --name My-Proj-DCOS-Cluster-1 --resource-group My-Proj-DCOS-Group-1 --template-file Create_Ent_DCOS_Azure_Cluster_With_3_Storage_Nodes.json | tee /tmp/az-deployment1.out
+     $ az group deployment create --name My-Proj-DCOS-Cluster-1 --resource-group My-Proj-DCOS-Group-1 --template-file Create_Ent_DCOS_Azure_Cluster_With_Storage_Nodes.json | tee /tmp/az-deployment1.out
 
 During this process, you will be prompted for the following parameters:
 
